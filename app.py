@@ -76,6 +76,39 @@ def handle_data_summary_tab(filtered_data):
             if selected_column:
                 display_column_summary(filtered_data, selected_column)
 
+# Function to handle the Data Analysis tab
+def handle_data_analysis_tab():
+    """Handles all content and logic within the Data Analysis Tab."""
+    st.header("Data Analysis")
+    st.write("This tab will host various analysis tools, such as univariate, bivariate, and multivariate analysis, along with other advanced data analysis features.")
+    
+    # Dropdown for analysis options
+    analysis_option = st.selectbox(
+        "Select an Analysis Type",
+        options=[
+            "Univariate Analysis",
+            "Bivariate Analysis",
+            "Multivariate Analysis",
+            "Correlation Analysis",
+            "Cross Tabulation"
+        ]
+    )
+    
+    # Show the description based on the selected analysis
+    description = {
+        "Univariate Analysis": "Analyze the distribution and summary statistics of individual variables.",
+        "Bivariate Analysis": "Analyze the relationship between two variables.",
+        "Multivariate Analysis": "Analyze relationships involving more than two variables.",
+        "Correlation Analysis": "Analyze correlations between numerical variables.",
+        "Cross Tabulation": "Analyze relationships between categorical variables."
+    }[analysis_option]
+    
+    st.subheader(analysis_option)
+    st.write(f"Description: {description}")
+    st.markdown("---")
+    st.write(f"Additional content for {analysis_option} will go here.")
+
+
 # Main app function
 def main():
     st.title("AnalytiQ")
@@ -109,14 +142,13 @@ def main():
         filtered_data = apply_filters(selected_data, filters)
         
         # Tabs for different views (e.g., Data View, Analysis, etc.)
-        tabs = st.tabs(["Data Summary", "Other Tab 1", "Other Tab 2"])
+        tabs = st.tabs(["Summary", "Analysis", "Other Tab 2"])
         
         with tabs[0]:
             handle_data_summary_tab(filtered_data)
         
         with tabs[1]:
-            st.header("Other Analysis 1")
-            st.write("Content for the second tab goes here.")
+            handle_data_analysis_tab()
         
         with tabs[2]:
             st.header("Other Analysis 2")
