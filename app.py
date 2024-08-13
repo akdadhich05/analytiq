@@ -121,6 +121,13 @@ def handle_data_analysis_tab(filtered_data):
             y_column = st.selectbox("Select Y-axis Column", filtered_data.columns)
         if x_column and y_column:
             display_bivariate_analysis(filtered_data, x_column, y_column)
+    # Multivariate Analysis implementation
+    elif analysis_option == "Multivariate Analysis":
+        selected_columns = st.multiselect("Select Columns for Multivariate Analysis", filtered_data.columns)
+        if selected_columns:
+            display_multivariate_analysis(filtered_data, selected_columns)
+
+
 
 def display_bivariate_analysis(df, x_column, y_column):
     """Displays bivariate analysis including scatter plots, bar charts, or correlation coefficients."""
@@ -157,6 +164,39 @@ def display_bivariate_analysis(df, x_column, y_column):
         else:
             st.warning(f"Cannot generate visualization for the selected columns: {x_column} (type: {x_dtype}) and {y_column} (type: {y_dtype}). The data types may not be compatible for visualization.")
     
+    except Exception as e:
+        st.error(f"An error occurred while generating the visualization: {e}")
+
+def display_multivariate_analysis(df, selected_columns):
+    """Displays multivariate analysis including pair plots, heatmaps, or 3D scatter plots."""
+    st.write(f"Analyzing relationships between: {', '.join(selected_columns)}")
+    
+    # Visualizations
+    st.subheader("Visualizations")
+    
+    try:
+        # Pair Plot
+        if len(selected_columns) > 1:
+            st.write("Pair Plot")
+            pair_plot_fig = px.scatter_matrix(df[selected_columns], title="Pair Plot")
+            st.plotly_chart(pair_plot_fig, use_container_width=True)
+        
+        # Heatmap
+        if len(selected_columns) > 1:
+            st.write("Heatmap")
+            corr_matrix = df[selected_columns].corr()
+            heatmap_fig = px.imshow(corr_matrix, text_auto=True, title="Correlation Heatmap")
+            st.plotly_chart(heatmap_fig, use_container_width=True)
+        
+        # 3D Scatter Plot (only if 3 columns are selected)
+        if len(selected_columns) == 3 and all(pd.api.types.is_numeric_dtype(df[col]) for col in selected_columns):
+            st.write("3D Scatter Plot")
+            scatter_3d_fig = px.scatter_3d(df, x=selected_columns[0], y=selected_columns[1], z=selected_columns[2], title="3D Scatter Plot")
+            st.plotly_chart(scatter_3d_fig, use_container_width=True)
+        
+        if len(selected_columns) > 3:
+            st.warning("3D Scatter Plot only supports three variables. Please select exactly three columns to view the plot.")
+        
     except Exception as e:
         st.error(f"An error occurred while generating the visualization: {e}")
 
