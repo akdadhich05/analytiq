@@ -111,6 +111,54 @@ def handle_data_analysis_tab(filtered_data):
         selected_column = st.selectbox("Select Column for Univariate Analysis", filtered_data.columns)
         if selected_column:
             display_univariate_analysis(filtered_data, selected_column)
+    
+    # Bivariate Analysis implementation
+    elif analysis_option == "Bivariate Analysis":
+        col1, col2 = st.columns(2)
+        with col1:
+            x_column = st.selectbox("Select X-axis Column", filtered_data.columns)
+        with col2:
+            y_column = st.selectbox("Select Y-axis Column", filtered_data.columns)
+        if x_column and y_column:
+            display_bivariate_analysis(filtered_data, x_column, y_column)
+
+def display_bivariate_analysis(df, x_column, y_column):
+    """Displays bivariate analysis including scatter plots, bar charts, or correlation coefficients."""
+    st.write(f"Analyzing the relationship between {x_column} and {y_column}")
+    
+    x_dtype = df[x_column].dtype
+    y_dtype = df[y_column].dtype
+
+    st.write(f"X-axis ({x_column}) Data Type: {x_dtype}")
+    st.write(f"Y-axis ({y_column}) Data Type: {y_dtype}")
+
+    # Check for missing values
+    if df[x_column].isnull().any() or df[y_column].isnull().any():
+        st.warning(f"Missing values detected in {x_column} or {y_column}. This might affect the analysis.")
+    
+    # Visualizations
+    st.subheader(f"Visualizations for {x_column} vs {y_column}")
+    
+    try:
+        if pd.api.types.is_numeric_dtype(df[x_column]) and pd.api.types.is_numeric_dtype(df[y_column]):
+            st.write("Scatter Plot")
+            scatter_fig = px.scatter(df, x=x_column, y=y_column, title=f'Scatter Plot of {x_column} vs {y_column}')
+            st.plotly_chart(scatter_fig, use_container_width=True)
+            
+            st.write("Correlation Coefficient")
+            correlation = df[[x_column, y_column]].corr().iloc[0, 1]
+            st.metric(label=f"Correlation between {x_column} and {y_column}", value=f"{correlation:.2f}")
+        
+        elif pd.api.types.is_categorical_dtype(df[x_column]) or pd.api.types.is_categorical_dtype(df[y_column]):
+            st.write("Bar Chart")
+            bar_fig = px.bar(df, x=x_column, y=y_column, title=f'Bar Chart of {x_column} vs {y_column}', color=x_column)
+            st.plotly_chart(bar_fig, use_container_width=True)
+        
+        else:
+            st.warning(f"Cannot generate visualization for the selected columns: {x_column} (type: {x_dtype}) and {y_column} (type: {y_dtype}). The data types may not be compatible for visualization.")
+    
+    except Exception as e:
+        st.error(f"An error occurred while generating the visualization: {e}")
 
 def display_univariate_analysis(df, column):
     """Displays univariate analysis including distribution plots and summary statistics."""
