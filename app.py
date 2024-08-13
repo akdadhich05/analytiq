@@ -76,8 +76,7 @@ def handle_data_summary_tab(filtered_data):
             if selected_column:
                 display_column_summary(filtered_data, selected_column)
 
-# Function to handle the Data Analysis tab
-def handle_data_analysis_tab():
+def handle_data_analysis_tab(filtered_data):
     """Handles all content and logic within the Data Analysis Tab."""
     st.header("Data Analysis")
     st.write("This tab will host various analysis tools, such as univariate, bivariate, and multivariate analysis, along with other advanced data analysis features.")
@@ -106,8 +105,65 @@ def handle_data_analysis_tab():
     st.subheader(analysis_option)
     st.write(f"Description: {description}")
     st.markdown("---")
-    st.write(f"Additional content for {analysis_option} will go here.")
+    
+    # Univariate Analysis implementation
+    if analysis_option == "Univariate Analysis":
+        selected_column = st.selectbox("Select Column for Univariate Analysis", filtered_data.columns)
+        if selected_column:
+            display_univariate_analysis(filtered_data, selected_column)
 
+def display_univariate_analysis(df, column):
+    """Displays univariate analysis including distribution plots and summary statistics."""
+    st.write(f"Analyzing {column}")
+    
+    # Display summary statistics in a more compact format
+    summary = column_summary(df, column)
+    
+    st.write("Summary Statistics:")
+    col1, col2, col3, col4, col5, col6 = st.columns(6)
+    
+    # Convert values to strings where necessary for display
+    col1.metric("Data Type", str(summary['Data Type']))
+    col2.metric("Unique Values", summary['Unique Values'])
+    col3.metric("Missing Values", summary['Missing Values'])
+    
+    if pd.api.types.is_numeric_dtype(df[column]):
+        col4.metric("Mean", summary['Mean'] if summary['Mean'] is not None else "N/A")
+        col5.metric("Median", summary['Median'] if summary['Median'] is not None else "N/A")
+        col6.metric("Mode", summary['Mode'] if summary['Mode'] is not None else "N/A")
+        
+        col1.metric("Standard Deviation", summary['Standard Deviation'] if summary['Standard Deviation'] is not None else "N/A")
+        col2.metric("Min", summary['Min'] if summary['Min'] is not None else "N/A")
+        col3.metric("Max", summary['Max'] if summary['Max'] is not None else "N/A")
+    
+    else:
+        col4.metric("Mode", str(summary['Mode']))
+
+    # Display visualizations
+    st.subheader(f"Visualizations for {column}")
+    
+    if pd.api.types.is_numeric_dtype(df[column]):
+        col1, col2 = st.columns(2)
+        with col1:
+            st.write("Histogram")
+            hist_fig = px.histogram(df, x=column, nbins=30, title=f'Histogram of {column}')
+            st.plotly_chart(hist_fig, use_container_width=True)
+
+        with col2:
+            st.write("Box Plot")
+            box_fig = px.box(df, y=column, title=f'Box Plot of {column}')
+            st.plotly_chart(box_fig, use_container_width=True)
+        
+        st.write("Density Plot")
+        density_fig = px.density_contour(df, x=column, title=f'Density Plot of {column}')
+        st.plotly_chart(density_fig, use_container_width=True)
+    
+    else:
+        st.write("Bar Plot")
+        value_counts_df = df[column].value_counts().reset_index()
+        value_counts_df.columns = [column, 'count']  # Rename columns for clarity
+        bar_fig = px.bar(value_counts_df, x=column, y='count', title=f'Bar Plot of {column}')
+        st.plotly_chart(bar_fig, use_container_width=True)
 
 # Main app function
 def main():
@@ -148,7 +204,7 @@ def main():
             handle_data_summary_tab(filtered_data)
         
         with tabs[1]:
-            handle_data_analysis_tab()
+            handle_data_analysis_tab(filtered_data)
         
         with tabs[2]:
             st.header("Other Analysis 2")
