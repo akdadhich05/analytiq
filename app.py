@@ -17,7 +17,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-
 # Function to display the summary as tiles
 def display_summary_tiles(summary):
     """Displays the summary statistics in a tile format."""
@@ -27,7 +26,6 @@ def display_summary_tiles(summary):
     col2.metric("Missing Values", summary['Missing Values'])
     col2.metric("Duplicate Rows", summary['Duplicate Rows'])
     col3.metric("Memory Usage (MB)", summary['Memory Usage (MB)'])
-
 
 # Function to display the column-level summary and distribution side by side
 def display_column_summary(df, column):
@@ -53,6 +51,30 @@ def display_column_summary(df, column):
         else:
             fig = px.histogram(df, x=column, color=column, title=f'Distribution of {column}')
         st.plotly_chart(fig, use_container_width=True)
+
+# Function to handle the first tab (Data Summary)
+def handle_data_summary_tab(filtered_data):
+    """Handles all content and logic within the Data Summary tab."""
+    st.header("Data Summary")
+    
+    # Display summary statistics in tiles
+    summary = generate_summary(filtered_data)
+    display_summary_tiles(summary)
+    
+    # Combined accordion with two tabs for detailed statistics and column-level summary
+    st.header("Detailed Analysis")
+    with st.expander("View Detailed Analysis", expanded=False):
+        sub_tabs = st.tabs(["Detailed Statistics", "Column-Level Summary"])
+        
+        with sub_tabs[0]:
+            st.subheader("Detailed Statistics")
+            st.dataframe(detailed_statistics(filtered_data), use_container_width=True)
+        
+        with sub_tabs[1]:
+            st.subheader("Column-Level Summary")
+            selected_column = st.selectbox("Select Column", filtered_data.columns)
+            if selected_column:
+                display_column_summary(filtered_data, selected_column)
 
 # Main app function
 def main():
@@ -87,31 +109,11 @@ def main():
         filtered_data = apply_filters(selected_data, filters)
         
         # Tabs for different views (e.g., Data View, Analysis, etc.)
-        tabs = st.tabs(["Data View", "Other Tab 1", "Other Tab 2"])
+        tabs = st.tabs(["Data Summary", "Other Tab 1", "Other Tab 2"])
         
         with tabs[0]:
-            st.header("Data Summary")
-            
-            # Display summary statistics in tiles
-            summary = generate_summary(filtered_data)
-            display_summary_tiles(summary)
-            
-            # Combined accordion with two tabs for detailed statistics and column-level summary
-            st.header("Detailed Analysis")
-            with st.expander("View Detailed Analysis", expanded=False):
-                sub_tabs = st.tabs(["Detailed Statistics", "Column-Level Summary"])
-                
-                with sub_tabs[0]:
-                    st.subheader("Detailed Statistics")
-                    st.dataframe(detailed_statistics(filtered_data), use_container_width=True)
-                
-                with sub_tabs[1]:
-                    st.subheader("Column-Level Summary")
-                    selected_column = st.selectbox("Select Column", filtered_data.columns)
-                    if selected_column:
-                        display_column_summary(filtered_data, selected_column)
+            handle_data_summary_tab(filtered_data)
         
-        # Placeholder content for other tabs
         with tabs[1]:
             st.header("Other Analysis 1")
             st.write("Content for the second tab goes here.")
@@ -120,10 +122,9 @@ def main():
             st.header("Other Analysis 2")
             st.write("Content for the third tab goes here.")
         
-        # View Data section remains constant across all tabs
-        st.header("View Data")
+        # View Data section that remains constant across all tabs
+        st.sidebar.header("View Data")
         st.write(f"Displaying first {data_limit} rows of {dataset_name}")
-        st.write(f"Data filtered by {filters}")
         st.dataframe(filtered_data, use_container_width=True)
             
 if __name__ == "__main__":
