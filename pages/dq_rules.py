@@ -6,7 +6,6 @@ import pandas as pd
 def main():
     st.title("Data Quality Rules")
     
-    # Fetch datasets from the database
     db: Session = next(get_db())
     datasets = db.query(Dataset).all()
     
@@ -18,42 +17,47 @@ def main():
     selected_dataset_name = st.selectbox("Select Dataset", dataset_names)
     
     if selected_dataset_name:
-        # Get the selected dataset object
         selected_dataset = db.query(Dataset).filter(Dataset.name == selected_dataset_name).first()
         st.subheader(f"Define Rules for {selected_dataset_name}")
         
-        # Load the dataset to get the column names
         df = pd.read_csv(selected_dataset.filepath)
         columns = df.columns.tolist()
+
+        rule_type = st.selectbox("Rule Type", ["Range Check", "Null Check", "Uniqueness Check", "Custom Lambda"])
         
-        # Interface to define a new rule
         with st.form("define_rule"):
             rule_name = st.text_input("Rule Name")
-            rule_type = st.selectbox("Rule Type", ["Range Check", "Null Check", "Uniqueness Check", "Custom Lambda"])
-            target_columns = st.multiselect("Target Columns", columns)  # Now using multiselect
-            condition = st.text_input("Condition (Lambda for Custom Rule)")
-            severity = st.selectbox("Severity", ["Warning", "Error"])
-            message = st.text_area("Custom Message")
+            target_columns = st.multiselect("Target Columns", columns)
             
+            condition = None
+            if rule_type == "Range Check":
+                min_value = st.number_input("Minimum Value", value=0.0)
+                max_value = st.number_input("Maximum Value", value=100.0)
+                condition = f"lambda x: {min_value} <= x <= {max_value}"
+            elif rule_type == "Custom Lambda":
+                condition = st.text_input("Condition (Lambda)")
+
+            severity = st.selectbox("Severity", ["Warning", "Error"])
+            description = st.text_area("Description (Use ${col_name} for dynamic column name)")
+
             submitted = st.form_submit_button("Add Rule")
             
             if submitted:
-                # Save each rule for the selected columns in the database
                 for target_column in target_columns:
+                    dynamic_message = description.replace("${col_name}", target_column)
                     new_rule = DQRule(
                         dataset_id=selected_dataset.id,
                         rule_name=rule_name,
                         rule_type=rule_type,
                         target_column=target_column,
-                        condition=condition,
+                        condition=condition if condition else "",
                         severity=severity,
-                        message=message
+                        message=dynamic_message
                     )
                     db.add(new_rule)
                 db.commit()
                 st.success(f"Rule '{rule_name}' added successfully!")
-        
-        # Display existing rules
+
         st.subheader(f"Existing Rules for {selected_dataset_name}")
         rules = db.query(DQRule).filter(DQRule.dataset_id == selected_dataset.id).all()
         
