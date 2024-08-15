@@ -55,3 +55,17 @@ def column_summary(df, col):
         'Max': df[col].max() if pd.api.types.is_numeric_dtype(df[col]) else 'N/A',
     }
     return summary
+
+
+def apply_dq_rules(df, rules):
+    violations = []
+    for rule in rules:
+        target_column = rule.target_column
+        condition = eval(rule.condition)
+        if not df[target_column].apply(condition).all():
+            violations.append({
+                'column': target_column,
+                'message': rule.message,
+                'severity': rule.severity
+            })
+    return violations

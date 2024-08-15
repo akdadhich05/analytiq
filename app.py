@@ -1,12 +1,13 @@
 # app.py
 
 import streamlit as st
-from pages import data_hub, datasets
+from pages import data_hub, datasets, dq_rules
 
 # Map page names to their respective functions
 PAGES = {
     "Home": data_hub.main,
     "Manage Datasets": datasets.main,
+    "Data Quality Rules": dq_rules.main,
 }
 
 def main():
