@@ -2,7 +2,7 @@ import streamlit as st
 from data_utils import *
 from data_analysis import *
 
-from models import get_db, Dataset  # Import the Dataset model and database session
+from models import get_db, Dataset, DQRule  # Import the Dataset model and database session
 from sqlalchemy.orm import Session
 
 # Try to import Plotly and install if not available
@@ -133,6 +133,26 @@ def handle_data_analysis_tab(filtered_data):
     elif analysis_option == "Correlation Analysis":
         display_correlation_analysis(filtered_data)
 
+# Function to handle the Data Quality tab
+def handle_data_quality_tab(filtered_data, dataset_id):
+    """Handles all content and logic within the Data Quality tab."""
+    st.header("Data Quality Check")
+    
+    # Fetch DQ rules for the selected dataset from the database
+    db: Session = next(get_db())
+    rules = db.query(DQRule).filter(DQRule.dataset_id == dataset_id).all()
+
+    # Apply DQ rules and show loader while processing
+    with st.spinner("Applying Data Quality Rules..."):
+        violations = apply_dq_rules(filtered_data, rules)
+    
+    if violations:
+        st.warning("Data Quality Issues Found:")
+        for violation in violations:
+            st.write(f"{violation['severity']}: {violation['message']} in column {violation['column']}")
+    else:
+        st.success("No data quality issues found!")
+
 def main():
     st.title("AnalytiQ")
 
@@ -171,17 +191,20 @@ def main():
         filtered_data = apply_filters(selected_data, filters)
         
         # Tabs for different views (e.g., Data View, Analysis, etc.)
-        tabs = st.tabs(["Summary", "Analysis", "Other Tab 2"])
+        tabs = st.tabs(["Summary", "Data Quality", "Analysis", "Other Tab 2"])
         
         with tabs[0]:
             handle_data_summary_tab(filtered_data)
         
         with tabs[1]:
-            handle_data_analysis_tab(filtered_data)
+            handle_data_quality_tab(filtered_data, selected_dataset.id)
         
         with tabs[2]:
+            handle_data_analysis_tab(filtered_data)
+        
+        with tabs[3]:
             st.header("Other Analysis 2")
-            st.write("Content for the third tab goes here.")
+            st.write("Content for the fourth tab goes here.")
         
         # View Data section that remains constant across all tabs
         st.sidebar.header("View Data")

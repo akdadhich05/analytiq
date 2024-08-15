@@ -1,0 +1,12 @@
+id,age,name,salary,department
+1,25,John Doe,50000,Engineering
+2,30,,60000,Marketing
+3,22,Alice,45000,Engineering
+4,29,Bob,70000,Finance
+5,,Chris,,Sales
+6,35,David,80000,Engineering
+7,23,Eve,55000,Marketing
+8,40,Frank,90000,Finance
+9,28,,65000,Sales
+10,33,Gary,85000,Engineering
+
