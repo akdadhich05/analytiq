@@ -2,6 +2,9 @@ import streamlit as st
 from data_utils import *
 from data_analysis import *
 
+from models import get_db, Dataset  # Import the Dataset model and database session
+from sqlalchemy.orm import Session
+
 # Try to import Plotly and install if not available
 try:
     import plotly.express as px
@@ -130,24 +133,29 @@ def handle_data_analysis_tab(filtered_data):
     elif analysis_option == "Correlation Analysis":
         display_correlation_analysis(filtered_data)
 
-# Main app function
 def main():
     st.title("AnalytiQ")
+
+    # Fetch datasets from the database
+    db: Session = next(get_db())
+    datasets = db.query(Dataset).all()
     
-    # Define the datasets folder path
-    datasets_folder = "datasets"
-    
-    # Fetch dataset file names
-    datasets = load_datasets(datasets_folder)
-    
+    if not datasets:
+        st.write("No datasets available. Please upload a dataset first.")
+        return
+
+    dataset_names = [dataset.name for dataset in datasets]
+
     # Sidebar for dataset selection, limit input, and filters
     st.sidebar.header("Select Dataset and Filters")
-    dataset_name = st.sidebar.selectbox("Select Dataset", datasets)
+    dataset_name = st.sidebar.selectbox("Select Dataset", dataset_names)
     data_limit = st.sidebar.number_input("Number of Rows to Fetch", min_value=1, value=1000, step=1000)
-    
+
     # Load the selected dataset with a loading spinner
     if dataset_name:
-        data_path = os.path.join(datasets_folder, dataset_name)
+        selected_dataset = db.query(Dataset).filter(Dataset.name == dataset_name).first()
+        data_path = selected_dataset.filepath
+        
         with st.spinner(f"Loading {dataset_name}..."):
             selected_data = load_data(data_path, data_limit)
         
@@ -179,6 +187,6 @@ def main():
         st.sidebar.header("View Data")
         st.write(f"Displaying first {data_limit} rows of {dataset_name}")
         st.dataframe(filtered_data, use_container_width=True)
-            
+
 if __name__ == "__main__":
     main()
