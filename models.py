@@ -7,14 +7,14 @@ def install_package(package):
 
 # Check and install SQLAlchemy if not installed
 try:
-    from sqlalchemy import create_engine, Column, Integer, String, Float
+    from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey
     from sqlalchemy.ext.declarative import declarative_base
-    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.orm import relationship, sessionmaker
 except ImportError:
     install_package("SQLAlchemy")
-    from sqlalchemy import create_engine, Column, Integer, String, Float
+    from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey
     from sqlalchemy.ext.declarative import declarative_base
-    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.orm import relationship, sessionmaker
 
 # Define the SQLite database
 DATABASE_URL = "sqlite:///./mydatabase.db"
@@ -34,6 +34,24 @@ class Dataset(Base):
     name = Column(String, unique=True, index=True)
     description = Column(String)
     filepath = Column(String)
+
+    # Relationship to DQRule
+    rules = relationship("DQRule", back_populates="dataset")
+
+
+class DQRule(Base):
+    __tablename__ = "dq_rules"
+
+    id = Column(Integer, primary_key=True, index=True)
+    dataset_id = Column(Integer, ForeignKey("datasets.id"), nullable=False)
+    rule_name = Column(String, nullable=False)
+    rule_type = Column(String, nullable=False)
+    target_column = Column(String, nullable=False)
+    condition = Column(Text, nullable=False)
+    severity = Column(String, nullable=False)
+    message = Column(Text, nullable=True)
+
+    dataset = relationship("Dataset", back_populates="rules")
 
 # Create the database tables
 Base.metadata.create_all(bind=engine)
