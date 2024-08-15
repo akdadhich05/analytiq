@@ -61,7 +61,17 @@ def apply_dq_rules(df, rules):
     violations = []
     for rule in rules:
         target_column = rule.target_column
-        condition = eval(rule.condition)
+        
+        # Define the lambda function directly in the rule
+        if rule.rule_type == "Range Check":
+            condition = lambda x: eval(rule.condition)
+        elif rule.rule_type == "Null Check":
+            condition = lambda x: pd.notnull(x)
+        elif rule.rule_type == "Uniqueness Check":
+            condition = lambda x: df[target_column].is_unique
+        elif rule.rule_type == "Custom Lambda":
+            condition = eval(rule.condition)  # Custom Lambda provided by the user
+        
         if not df[target_column].apply(condition).all():
             violations.append({
                 'column': target_column,
