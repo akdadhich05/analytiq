@@ -4,20 +4,9 @@ import sys
 from datetime import datetime
 import json
 
-# Function to install a package if it's not already installed
-def install_package(package):
-    subprocess.check_call([sys.executable, "-m", "pip", "install", package])
-
-# Check and install SQLAlchemy if not installed
-try:
-    from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime
-    from sqlalchemy.ext.declarative import declarative_base
-    from sqlalchemy.orm import relationship, sessionmaker
-except ImportError:
-    install_package("SQLAlchemy")
-    from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime
-    from sqlalchemy.ext.declarative import declarative_base
-    from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship, sessionmaker
 
 # Define the SQLite database
 DATABASE_URL = "sqlite:///./mydatabase.db"
@@ -52,17 +41,17 @@ class DatasetVersion(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     dataset = relationship("Dataset", back_populates="versions")
-    actions = relationship("DatasetAction", back_populates="version")
+    operations = relationship("DatasetOperation", back_populates="version")
 
-class DatasetAction(Base):
-    __tablename__ = "dataset_actions"
+class DatasetOperation(Base):
+    __tablename__ = "dataset_operations"
 
     id = Column(Integer, primary_key=True, index=True)
     version_id = Column(Integer, ForeignKey("dataset_versions.id"), nullable=False)
-    action_type = Column(String, nullable=False)
+    operation_type = Column(String, nullable=False)
     parameters = Column(Text, nullable=False)  # JSON encoded string to store action details
 
-    version = relationship("DatasetVersion", back_populates="actions")
+    version = relationship("DatasetVersion", back_populates="operations")
 
 class DQRule(Base):
     __tablename__ = "dq_rules"
