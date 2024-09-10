@@ -70,7 +70,6 @@ AnalytiQ uses the OpenAI API for its generative AI functionalities. To configure
 
 3. **Add your OpenAI API key** to the `secrets.toml` file:
     ```toml
-    [default]
     openai_api_key = "your_openai_api_key_here"
     ```
 
