@@ -6,6 +6,7 @@ import plotly.express as px
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, OneHotEncoder, LabelEncoder
 from scipy.stats import zscore
 from sklearn import __version__ as sklearn_version
+from sklearn.impute import KNNImputer
 
 # Function to load datasets
 def load_datasets(folder_path):
@@ -31,7 +32,7 @@ def generate_summary(df):
     summary = {
         'Number of Rows': len(df),
         'Number of Columns': len(df.columns),
-        'Missing Values': df.isnull().sum().sum(),
+        'Missing Values': df.isnull().sum(),
         'Duplicate Rows': df.duplicated().sum(),
         'Memory Usage (MB)': round(df.memory_usage(deep=True).sum() / (1024**2), 2)
     }
@@ -46,7 +47,7 @@ def column_summary(df, col):
     summary = {
         'Data Type': df[col].dtype,
         'Unique Values': df[col].nunique(),
-        'Missing Values': df[col].isnull().sum(),
+        'Missing Values': df[col].apply(lambda x: pd.isna(x) or x == '').sum(),
         'Mean': df[col].mean() if pd.api.types.is_numeric_dtype(df[col]) else 'N/A',
         'Median': df[col].median() if pd.api.types.is_numeric_dtype(df[col]) else 'N/A',
         'Mode': df[col].mode().iloc[0] if not df[col].mode().empty else 'N/A',
@@ -118,14 +119,29 @@ def apply_operations_to_dataset(dataset, operations):
             dataset[parameters["new_column"]] = eval(parameters["formula"], {'__builtins__': None}, dataset)
         
         elif operation_type == "Fill Missing Values":
+            column = parameters["column"]
+            column_type = dataset[column].dtype
+            
             if parameters["method"] == "Specific Value":
-                dataset[parameters["column"]].fillna(parameters["value"], inplace=True)
+                dataset[column].fillna(parameters["value"], inplace=True)
             elif parameters["method"] == "Mean":
-                dataset[parameters["column"]].fillna(dataset[parameters["column"]].mean(), inplace=True)
+                if column_type in ['int64', 'float64']:
+                    dataset[column].fillna(dataset[column].mean(), inplace=True)
+                else:
+                    raise ValueError(f"Mean imputation is only applicable to numerical columns. Column '{column}' is not numerical.")
             elif parameters["method"] == "Median":
-                dataset[parameters["column"]].fillna(dataset[parameters["column"]].median(), inplace=True)
+                if column_type in ['int64', 'float64']:
+                    dataset[column].fillna(dataset[column].median(), inplace=True)
+                else:
+                    raise ValueError(f"Median imputation is only applicable to numerical columns. Column '{column}' is not numerical.")
             elif parameters["method"] == "Mode":
-                dataset[parameters["column"]].fillna(dataset[parameters["column"]].mode()[0], inplace=True)
+                dataset[column].fillna(dataset[column].mode()[0], inplace=True)
+            elif parameters["method"] == "KNN":
+                if column_type in ['int64', 'float64']:
+                    imputer = KNNImputer(n_neighbors=5)  # You can adjust n_neighbors as needed
+                    dataset[column] = imputer.fit_transform(dataset[[column]])
+                else:
+                    raise ValueError(f"KNN imputation is only applicable to numerical columns. Column '{column}' is not numerical.")
         
         elif operation_type == "Duplicate Column":
             dataset[f"{parameters['column']}_duplicate"] = dataset[parameters["column"]]
@@ -155,7 +171,7 @@ def apply_operations_to_dataset(dataset, operations):
                 for col in parameters["columns"]:
                     dataset[col] = encoder.fit_transform(dataset[col])
 
-        elif operation_type == "Impute Missing Values":
+        elif operation_type == "Fill Missing Values":
             for col in parameters["columns"]:
                 if parameters["method"] == "Mean":
                     dataset[col].fillna(dataset[col].mean(), inplace=True)

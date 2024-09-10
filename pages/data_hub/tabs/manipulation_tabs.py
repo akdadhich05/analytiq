@@ -157,7 +157,7 @@ def handle_preprocessing_tab(filtered_data, selected_version):
         [
             "Scale Data",
             "Encode Categorical Variables",
-            "Impute Missing Values",
+            "Fill Missing Values",
             "Remove Outliers"
         ]
     )
@@ -188,10 +188,10 @@ def handle_preprocessing_tab(filtered_data, selected_version):
             st.write(f"Encoded columns: {', '.join(selected_columns)} using {encoding_type}")
             log_operation(selected_version.id, "Encode Data", {"columns": selected_columns, "type": encoding_type})
 
-    elif operation == "Impute Missing Values":
+    elif operation == "Fill Missing Values":
         selected_columns = st.multiselect("Select Columns to Impute", filtered_data.columns)
         impute_method = st.selectbox("Select Imputation Method", ["Mean", "Median", "Mode"])
-        if st.button("Impute Missing Values"):
+        if st.button("Fill Missing Values"):
             for col in selected_columns:
                 if impute_method == "Mean":
                     filtered_data[col].fillna(filtered_data[col].mean(), inplace=True)
@@ -200,7 +200,7 @@ def handle_preprocessing_tab(filtered_data, selected_version):
                 elif impute_method == "Mode":
                     filtered_data[col].fillna(filtered_data[col].mode()[0], inplace=True)
             st.write(f"Imputed missing values in columns: {', '.join(selected_columns)} using {impute_method}")
-            log_operation(selected_version.id, "Impute Missing Values", {"columns": selected_columns, "method": impute_method})
+            log_operation(selected_version.id, "Fill Missing Values", {"columns": selected_columns, "method": impute_method})
 
     elif operation == "Remove Outliers":
         selected_column = st.selectbox("Select Column to Remove Outliers", filtered_data.columns)
