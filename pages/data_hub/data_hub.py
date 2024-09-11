@@ -2,6 +2,7 @@ import time
 import json
 
 import streamlit as st
+import polars as pl
 
 from .tabs.ml_tab import handle_ml_tab
 from .tabs.summary_tab import handle_data_summary_tab
@@ -111,7 +112,7 @@ def main():
             selected_data = apply_operations_to_dataset(selected_data, operations)
         
         st.session_state.original_data = selected_data
-        st.session_state.unfiltered_data = selected_data.copy()
+        st.session_state.unfiltered_data = selected_data.clone()  # Save a copy for filter options
 
         with st.sidebar.expander("Filters", expanded=False):
             filters = {}
@@ -121,9 +122,9 @@ def main():
                     filters[column] = st.selectbox(f"Filter by {column}", options=[None] + list(unique_vals))
 
             if filters:
-                st.session_state.filtered_data = apply_filters(st.session_state.original_data.copy(), filters)
+                st.session_state.filtered_data = apply_filters(st.session_state.original_data.clone(), filters)
             else:
-                st.session_state.filtered_data = st.session_state.original_data.copy()
+                st.session_state.filtered_data = st.session_state.original_data.clone()
 
         tabs = st.tabs(
             [

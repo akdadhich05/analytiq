@@ -1,4 +1,4 @@
-import pandas as pd
+import polars as pl
 import streamlit as st
 
 from data_utils import generate_summary, detailed_statistics
@@ -22,7 +22,6 @@ from machine_learning.utils import (
 )
 
 
-
 def handle_ml_tab(filtered_data):
     """Handles all content and logic within the Machine Learning Tab."""
     st.header("Machine Learning Assistant")
@@ -42,13 +41,13 @@ def handle_ml_tab(filtered_data):
         st.subheader("3. Get Algorithm Suggestions")
         if st.button("Get Suggestions"):
             if use_case:
-                st.info("Sending your data and use case to the LLM for algorithm suggestions...")
-                suggested_algorithms = suggest_models(use_case, task.lower(), filtered_data.head(), generate_summary(filtered_data), detailed_statistics(filtered_data))
-                if suggested_algorithms:
-                    st.session_state.suggested_algorithms = suggested_algorithms
-                    st.success(f"Suggested Algorithms: {', '.join(suggested_algorithms)}")
-                else:
-                    st.warning("No suggestions received. Please check your use case description.")
+                with st.spinner("Sending your data and use case to the LLM for algorithm suggestions..."):
+                    suggested_algorithms = suggest_models(use_case, task.lower(), filtered_data.head(), generate_summary(filtered_data), detailed_statistics(filtered_data))
+                    if suggested_algorithms:
+                        st.session_state.suggested_algorithms = suggested_algorithms
+                        st.success(f"Suggested Algorithms: {', '.join(suggested_algorithms)}")
+                    else:
+                        st.warning("No suggestions received. Please check your use case description.")
             else:
                 st.error("Please describe your use case before getting suggestions.")
 
@@ -62,35 +61,38 @@ def handle_ml_tab(filtered_data):
         st.subheader("5. Get Target Column Suggestion")
         if st.button("Get Suggested Target Column"):
             try:
-                suggested_target = suggest_target_column(
-                    task,
-                    filtered_data.columns,
-                    use_case,
-                    filtered_data.head(),
-                    generate_summary(filtered_data),
-                    detailed_statistics(filtered_data)
-                )
-                st.session_state.target_column = suggested_target
-                st.success(f"Suggested Target Column: {suggested_target}")
+                with st.spinner("Getting suggestions"):
+                    suggested_target = suggest_target_column(
+                        task,
+                        filtered_data.columns,
+                        use_case,
+                        filtered_data.head().to_pandas(),
+                        generate_summary(filtered_data),
+                        detailed_statistics(filtered_data)
+                    )
+                    st.session_state.target_column = suggested_target
+                    st.success(f"Suggested Target Column: {suggested_target}")
             except ValueError as e:
                 st.error(str(e))
         
         st.session_state.target_column = st.selectbox(
             "Select Target Column",
             filtered_data.columns
+            
         )
 
         st.subheader("6. Model Comparison and Training")
         if st.button("Run Selected Models"):
             if selected_algorithms and 'target_column' in st.session_state:
-                st.info(f"Running the following models: {', '.join(selected_algorithms)}")
-                st.session_state.aml, st.session_state.test_data = run_h2o_automl(filtered_data, st.session_state.target_column, task.lower(), selected_algorithms)
+                with st.spinner(f"Running the following models: {', '.join(selected_algorithms)}"):
+                    st.session_state.aml, st.session_state.test_data = run_h2o_automl(filtered_data, st.session_state.target_column, task.lower(), selected_algorithms)
                 
                 st.write("AutoML completed. Model leaderboard:")
                 leaderboard = st.session_state.aml.leaderboard
-                st.dataframe(leaderboard.as_data_frame().style.highlight_max(axis=0))
+                print(type(leaderboard))
+                st.dataframe(leaderboard.as_data_frame(use_multi_thread=True).style.highlight_max(axis=0))
                 
-                leaderboard_commentary = generate_leaderboard_commentary(use_case, filtered_data.head(), selected_algorithms, leaderboard.as_data_frame())
+                leaderboard_commentary = generate_leaderboard_commentary(use_case, filtered_data.head().to_pandas(), selected_algorithms, leaderboard.as_data_frame(use_multi_thread=True))
                 st.markdown("### Leaderboard Commentary")
                 st.markdown(leaderboard_commentary)
             else:
@@ -106,9 +108,9 @@ def handle_ml_tab(filtered_data):
             if test_data_option == "Upload new test data":
                 test_file = st.file_uploader("Choose a CSV file for testing", type="csv")
                 if test_file is not None:
-                    test_data = pd.read_csv(test_file)
+                    test_data = pl.read_parquet(test_file)
                     st.session_state.test_data = h2o.H2OFrame(test_data)
-                    st.session_state.actual_values = test_data[st.session_state.target_column]
+                    st.session_state.actual_values = test_data[st.session_state.target_column].to_pandas()
 
             if st.button("Run selected model"):
                 run_selected_model()
@@ -120,8 +122,8 @@ def handle_ml_tab(filtered_data):
                 with tabs[0]:
                     st.write("### Model Evaluation")
                     st.write("Actual vs Predicted:")
-                    st.dataframe(predictions_with_actuals.as_data_frame())
-                    predictions_commentary = explain_predictions_commentary(predictions_with_actuals.as_data_frame(), st.session_state.actual_values)
+                    st.dataframe(predictions_with_actuals.as_data_frame(use_multi_thread=True))
+                    predictions_commentary = explain_predictions_commentary(predictions_with_actuals, st.session_state.actual_values)
                     st.markdown("### Predictions Commentary")
                     st.markdown(predictions_commentary)
 
@@ -135,7 +137,7 @@ def handle_ml_tab(filtered_data):
 
                 with tabs[2]:
                     st.write("### Business Insights")
-                    insights_commentary = explain_insights_commentary(predictions_with_actuals.as_data_frame(), st.session_state.feature_importance)
+                    insights_commentary = explain_insights_commentary(predictions_with_actuals, st.session_state.feature_importance)
                     st.markdown(insights_commentary)
 
                 with tabs[3]:
@@ -146,7 +148,7 @@ def handle_ml_tab(filtered_data):
                         filtered_data,
                         st.session_state.target_column,
                         st.session_state.aml,
-                        predictions_with_actuals.as_data_frame(),
+                        predictions_with_actuals,
                         st.session_state.feature_importance
                     )
                     st.markdown(industry_report)
